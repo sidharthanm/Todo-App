@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Smart Todo</title>
+  </head>
+  <body>
+    <h1>Smart Todo</h1>
+
+    <h3>Register</h3>
+    <input id="r_email" />
+    <input id="r_pass" type="password" />
+    <button onclick="register()">Register</button>
+
+    <h3>Login</h3>
+    <input id="l_email" />
+    <input id="l_pass" type="password" />
+    <button onclick="login()">Login</button>
+
+    <h3>Create Todo</h3>
+    <input id="title" />
+    <button onclick="createTodo()">Create</button>
+
+    <h3>Todos</h3>
+    <button onclick="loadTodos()">Refresh</button>
+    <div id="list"></div>
+
+    <script>
+      const API = "http://127.0.0.1:8000";
+
+      function register() {
+        fetch(`${API}/auth/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: r_email.value,
+            password: r_pass.value,
+          }),
+        });
+      }
+
+      function login() {
+        fetch(`${API}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: l_email.value,
+            password: l_pass.value,
+          }),
+        })
+          .then((r) => r.json())
+          .then((d) => localStorage.setItem("token", d.access_token));
+      }
+
+      function createTodo() {
+        fetch(`${API}/todos/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + localStorage.getItem("token"),
+          },
+          body: JSON.stringify({ title: title.value }),
+        }).then(loadTodos);
+      }
+
+      function loadTodos() {
+        fetch(`${API}/todos/`, {
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem("token"),
+          },
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            list.innerHTML = "";
+            data.forEach((t) => {
+              let div = document.createElement("div");
+              div.innerText = t.title;
+              list.appendChild(div);
+            });
+          });
+      }
+    </script>
+  </body>
+</html>
