@@ -12,6 +12,13 @@ router = APIRouter(prefix="/todos")
 def create(todo: TodoCreate,
            db: Session = Depends(get_db),
            user=Depends(get_current_user)):
+    if todo.parent_id:
+        parent = db.query(Todo).filter(
+            Todo.id == todo.parent_id,
+            Todo.user_id == user.id
+        ).first()
+        if not parent:
+            raise HTTPException(status_code=404, detail="Parent task not found")
     return create_todo(db, todo, user.id)
 
 
@@ -41,5 +48,5 @@ def delete(todo_id: str,
                                  Todo.user_id == user.id).first()
     if not todo:
         raise HTTPException(status_code=404)
-    delete_todo(db, todo)
-    return {"deleted": True}
+    updated = delete_todo(db, todo)
+    return {"finished": True, "id": str(updated.id), "completed": updated.completed}

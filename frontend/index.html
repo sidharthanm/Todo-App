@@ -214,15 +214,32 @@
         background: #fbfefb;
       }
 
+      .todo-item.completed {
+        opacity: 0.82;
+        background: #f4f8f2;
+      }
+
       .todo-title {
         margin: 0 0 6px;
         font-size: 1.02rem;
+      }
+
+      .todo-item.completed .todo-title {
+        text-decoration: line-through;
       }
 
       .todo-meta {
         color: var(--muted);
         font-size: 0.86rem;
         margin: 2px 0;
+      }
+
+      .subtask-list {
+        margin-top: 10px;
+        padding-left: 14px;
+        border-left: 2px solid var(--border);
+        display: grid;
+        gap: 8px;
       }
 
       .todo-item .actions {
@@ -315,6 +332,10 @@
               <div>
                 <label for="c_deadline">Deadline</label>
                 <input id="c_deadline" type="datetime-local" />
+              </div>
+              <div>
+                <label for="c_parent_id">Parent Task ID (optional)</label>
+                <input id="c_parent_id" placeholder="Leave empty for top-level task" />
               </div>
               <div class="actions">
                 <button class="btn-brand" onclick="createTodo()">Create</button>
@@ -467,6 +488,7 @@
         c_title.value = "";
         c_description.value = "";
         c_deadline.value = "";
+        c_parent_id.value = "";
       }
 
       function clearEditForm() {
@@ -483,6 +505,7 @@
           title: c_title.value.trim(),
           description: c_description.value.trim() || null,
           deadline: normalizeDatetimeForApi(c_deadline.value),
+          parent_id: c_parent_id.value.trim() || null,
         };
 
         if (!payload.title) {
@@ -525,7 +548,7 @@
 
           const data = await res.json();
           renderTodos(data);
-          setStatus("todoStatus", `${data.length} todo(s) loaded.`);
+          setStatus("todoStatus", `${countTodos(data)} task(s) loaded.`);
         } catch (e) {
           setStatus("todoStatus", `Load error: ${e.message}`, true);
         }
@@ -539,26 +562,53 @@
           return;
         }
 
-        todos.forEach((t) => {
-          const div = document.createElement("div");
-          div.className = "todo-item";
-          div.innerHTML = `
-            <h4 class="todo-title">${escapeHtml(t.title || "(untitled)")}</h4>
-            <p class="todo-meta">Description: ${escapeHtml(t.description || "-")}</p>
-            <p class="todo-meta">Completed: ${t.completed ? "Yes" : "No"}</p>
-            <p class="todo-meta">Deadline: ${escapeHtml(formatDate(t.deadline))}</p>
-            <p class="todo-meta">Created at: ${escapeHtml(formatDate(t.created_at))}</p>
-            <p class="todo-meta">ID: ${escapeHtml(t.id)}</p>
-            <div class="actions">
-              <button class="btn-soft" data-edit="${t.id}">Edit</button>
-              <button class="btn-danger" data-del="${t.id}">Delete</button>
-            </div>
-          `;
+        todos.forEach((t) => list.appendChild(createTodoCard(t)));
+      }
 
-          div.querySelector("[data-edit]").onclick = () => fillEditForm(t);
-          div.querySelector("[data-del]").onclick = () => deleteTodo(t.id);
-          list.appendChild(div);
-        });
+      function createTodoCard(todo) {
+        const div = document.createElement("div");
+        div.className = `todo-item ${todo.completed ? "completed" : ""}`;
+        div.innerHTML = `
+          <h4 class="todo-title">${escapeHtml(todo.title || "(untitled)")}</h4>
+          <p class="todo-meta">Description: ${escapeHtml(todo.description || "-")}</p>
+          <p class="todo-meta">Completed: ${todo.completed ? "Yes" : "No"}</p>
+          <p class="todo-meta">Deadline: ${escapeHtml(formatDate(todo.deadline))}</p>
+          <p class="todo-meta">Created at: ${escapeHtml(formatDate(todo.created_at))}</p>
+          <p class="todo-meta">ID: ${escapeHtml(todo.id)}</p>
+          <div class="actions">
+            <button class="btn-soft" data-edit="${todo.id}">Edit</button>
+            <button class="btn-soft" data-sub="${todo.id}">Add Subtask</button>
+            ${todo.completed ? "" : `<button class="btn-danger" data-finish="${todo.id}">Finish</button>`}
+          </div>
+        `;
+
+        div.querySelector("[data-edit]").onclick = () => fillEditForm(todo);
+        div.querySelector("[data-sub]").onclick = () => prepareSubtask(todo.id);
+
+        const finishBtn = div.querySelector("[data-finish]");
+        if (finishBtn) {
+          finishBtn.onclick = () => finishTodo(todo.id);
+        }
+
+        if (Array.isArray(todo.subtasks) && todo.subtasks.length > 0) {
+          const container = document.createElement("div");
+          container.className = "subtask-list";
+          todo.subtasks.forEach((subtask) => container.appendChild(createTodoCard(subtask)));
+          div.appendChild(container);
+        }
+
+        return div;
+      }
+
+      function prepareSubtask(parentId) {
+        c_parent_id.value = parentId;
+        c_title.focus();
+        setStatus("todoStatus", `Creating subtask under ${parentId}`);
+      }
+
+      function countTodos(todos) {
+        if (!Array.isArray(todos)) return 0;
+        return todos.reduce((sum, todo) => sum + 1 + countTodos(todo.subtasks || []), 0);
       }
 
       function fillEditForm(todo) {
@@ -602,7 +652,7 @@
         }
       }
 
-      async function deleteTodo(id) {
+      async function finishTodo(id) {
         if (!requireAuth()) return;
 
         try {
@@ -613,14 +663,14 @@
 
           if (!res.ok) {
             const txt = await res.text();
-            throw new Error(txt || "Delete failed");
+            throw new Error(txt || "Finish failed");
           }
 
           if (e_id.value === id) clearEditForm();
-          setStatus("todoStatus", "Todo deleted.");
+          setStatus("todoStatus", "Task marked as finished.");
           loadTodos();
         } catch (e) {
-          setStatus("todoStatus", `Delete error: ${e.message}`, true);
+          setStatus("todoStatus", `Finish error: ${e.message}`, true);
         }
       }
 

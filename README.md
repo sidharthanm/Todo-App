@@ -4,6 +4,8 @@
 
 Tier1 Smart Todo is a FastAPI-based backend for user-authenticated todo management, with a minimal HTML frontend and PostgreSQL persistence.
 
+Run using ` uv run uvicorn app.main:app --reload`
+
 ## Services Offered by the App
 
 ### 1) Authentication Service (`/auth`)
