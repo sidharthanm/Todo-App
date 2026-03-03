@@ -1,18 +1,20 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 from datetime import datetime
+from uuid import UUID
 
 
 class TodoCreate(BaseModel):
     title: str
     description: Optional[str] = None
     deadline: Optional[datetime] = None
+    parent_id: Optional[UUID] = None
 
 
 class TodoUpdate(BaseModel):
-    title: Optional[str]
-    description: Optional[str]
-    completed: Optional[bool]
+    title: Optional[str] = None
+    description: Optional[str] = None
+    completed: Optional[bool] = None
 
 
 class TodoOut(BaseModel):
@@ -20,6 +22,12 @@ class TodoOut(BaseModel):
     title: str
     description: Optional[str]
     completed: bool
+    deadline: Optional[datetime]
+    created_at: Optional[datetime]
+    parent_id: Optional[str]
+    subtasks: list["TodoOut"] = Field(default_factory=list)
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
+
+
+TodoOut.model_rebuild()
