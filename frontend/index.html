@@ -1,83 +1,649 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Smart Todo</title>
+    <style>
+      :root {
+        --bg: #f3f7f2;
+        --surface: #ffffff;
+        --surface-alt: #e9f2e4;
+        --text: #1e2a1f;
+        --muted: #5d6d5f;
+        --brand: #2f7a44;
+        --brand-strong: #245f34;
+        --danger: #c44343;
+        --border: #d3dfd0;
+        --shadow: 0 10px 25px rgba(22, 42, 24, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background:
+          radial-gradient(circle at 10% 10%, #d9ebd2 0%, transparent 35%),
+          radial-gradient(circle at 90% 20%, #cde6d9 0%, transparent 35%),
+          linear-gradient(160deg, #eff6ea 0%, #eaf4f6 100%);
+        color: var(--text);
+      }
+
+      .shell {
+        max-width: 1100px;
+        margin: 30px auto;
+        padding: 0 16px 24px;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 20px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.8);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(8px);
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-size: 1.6rem;
+      }
+
+      .brand p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .nav {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .nav button {
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        border-radius: 999px;
+        padding: 9px 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .nav button.active {
+        background: var(--brand);
+        border-color: var(--brand);
+        color: #fff;
+      }
+
+      .view {
+        display: none;
+        margin-top: 20px;
+        background: rgba(255, 255, 255, 0.88);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+        padding: 22px;
+      }
+
+      .view.active {
+        display: block;
+        animation: fadeIn 220ms ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      h2 {
+        margin-top: 0;
+      }
+
+      .stack {
+        display: grid;
+        gap: 10px;
+        max-width: 520px;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      label {
+        font-size: 0.88rem;
+        color: var(--muted);
+        margin-bottom: 4px;
+        display: block;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: #fff;
+        color: var(--text);
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 76px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .btn-brand {
+        background: var(--brand);
+        color: #fff;
+      }
+
+      .btn-brand:hover {
+        background: var(--brand-strong);
+      }
+
+      .btn-danger {
+        background: var(--danger);
+        color: #fff;
+      }
+
+      .btn-soft {
+        background: var(--surface-alt);
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+
+      .status {
+        margin: 12px 0 0;
+        color: var(--muted);
+        min-height: 20px;
+      }
+
+      .todo-layout {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        gap: 18px;
+      }
+
+      .panel {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        background: #fff;
+      }
+
+      .todo-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .todo-item {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px;
+        background: #fbfefb;
+      }
+
+      .todo-title {
+        margin: 0 0 6px;
+        font-size: 1.02rem;
+      }
+
+      .todo-meta {
+        color: var(--muted);
+        font-size: 0.86rem;
+        margin: 2px 0;
+      }
+
+      .todo-item .actions {
+        margin-top: 10px;
+      }
+
+      @media (max-width: 880px) {
+        .todo-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .row {
+          grid-template-columns: 1fr;
+        }
+
+        .header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
   </head>
   <body>
-    <h1>Smart Todo</h1>
+    <main class="shell">
+      <section class="header">
+        <div class="brand">
+          <h1>Smart Todo</h1>
+          <p>Auth + Todo manager with model-aware fields</p>
+        </div>
+        <nav class="nav">
+          <button id="navLogin" onclick="showView('login')">Login</button>
+          <button id="navRegister" onclick="showView('register')">Register</button>
+          <button id="navTodos" onclick="showView('todos')">Todos</button>
+          <button class="btn-soft" onclick="logout()">Logout</button>
+        </nav>
+      </section>
 
-    <h3>Register</h3>
-    <input id="r_email" />
-    <input id="r_pass" type="password" />
-    <button onclick="register()">Register</button>
+      <section id="view-login" class="view">
+        <h2>Login</h2>
+        <div class="stack">
+          <div>
+            <label for="l_email">Email</label>
+            <input id="l_email" type="email" placeholder="you@example.com" />
+          </div>
+          <div>
+            <label for="l_pass">Password</label>
+            <input id="l_pass" type="password" placeholder="Your password" />
+          </div>
+          <div class="actions">
+            <button class="btn-brand" onclick="login()">Login</button>
+            <button class="btn-soft" onclick="showView('register')">Create account</button>
+          </div>
+          <p id="loginStatus" class="status"></p>
+        </div>
+      </section>
 
-    <h3>Login</h3>
-    <input id="l_email" />
-    <input id="l_pass" type="password" />
-    <button onclick="login()">Login</button>
+      <section id="view-register" class="view">
+        <h2>Register</h2>
+        <div class="stack">
+          <div>
+            <label for="r_email">Email</label>
+            <input id="r_email" type="email" placeholder="you@example.com" />
+          </div>
+          <div>
+            <label for="r_pass">Password</label>
+            <input id="r_pass" type="password" placeholder="Create password" />
+          </div>
+          <div class="actions">
+            <button class="btn-brand" onclick="register()">Register</button>
+            <button class="btn-soft" onclick="showView('login')">Back to login</button>
+          </div>
+          <p id="registerStatus" class="status"></p>
+        </div>
+      </section>
 
-    <h3>Create Todo</h3>
-    <input id="title" />
-    <button onclick="createTodo()">Create</button>
+      <section id="view-todos" class="view">
+        <h2>Todo Dashboard</h2>
+        <div class="todo-layout">
+          <div class="panel">
+            <h3>Create Todo</h3>
+            <div class="stack">
+              <div>
+                <label for="c_title">Title *</label>
+                <input id="c_title" placeholder="Task title" />
+              </div>
+              <div>
+                <label for="c_description">Description</label>
+                <textarea id="c_description" placeholder="Optional details"></textarea>
+              </div>
+              <div>
+                <label for="c_deadline">Deadline</label>
+                <input id="c_deadline" type="datetime-local" />
+              </div>
+              <div class="actions">
+                <button class="btn-brand" onclick="createTodo()">Create</button>
+                <button class="btn-soft" onclick="clearCreateForm()">Clear</button>
+              </div>
+            </div>
 
-    <h3>Todos</h3>
-    <button onclick="loadTodos()">Refresh</button>
-    <div id="list"></div>
+            <hr />
+
+            <h3>Edit Todo</h3>
+            <div class="stack">
+              <div>
+                <label for="e_id">Selected Todo ID</label>
+                <input id="e_id" placeholder="Select from list" disabled />
+              </div>
+              <div>
+                <label for="e_title">Title</label>
+                <input id="e_title" placeholder="Edit title" />
+              </div>
+              <div>
+                <label for="e_description">Description</label>
+                <textarea id="e_description" placeholder="Edit description"></textarea>
+              </div>
+              <div>
+                <label>
+                  <input id="e_completed" type="checkbox" /> Completed
+                </label>
+              </div>
+              <div class="actions">
+                <button class="btn-brand" onclick="updateTodo()">Update</button>
+                <button class="btn-soft" onclick="clearEditForm()">Cancel</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="actions" style="justify-content: space-between; margin-bottom: 10px;">
+              <h3 style="margin: 0;">Your Todos</h3>
+              <button class="btn-soft" onclick="loadTodos()">Refresh</button>
+            </div>
+            <div id="list" class="todo-list"></div>
+            <p id="todoStatus" class="status"></p>
+          </div>
+        </div>
+      </section>
+    </main>
 
     <script>
       const API = "http://127.0.0.1:8000";
 
-      function register() {
-        fetch(`${API}/auth/register`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: r_email.value,
-            password: r_pass.value,
-          }),
+      function getToken() {
+        return localStorage.getItem("token");
+      }
+
+      function setStatus(id, msg, isError = false) {
+        const el = document.getElementById(id);
+        el.textContent = msg || "";
+        el.style.color = isError ? "#b32323" : "#4d644f";
+      }
+
+      function showView(view) {
+        ["login", "register", "todos"].forEach((name) => {
+          document.getElementById(`view-${name}`).classList.toggle("active", name === view);
+          document.getElementById(`nav${name.charAt(0).toUpperCase() + name.slice(1)}`).classList.toggle("active", name === view);
+        });
+
+        if (view === "todos") {
+          loadTodos();
+        }
+      }
+
+      function normalizeDatetimeForApi(localValue) {
+        if (!localValue) return null;
+        return new Date(localValue).toISOString();
+      }
+
+      function formatDate(value) {
+        if (!value) return "-";
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return value;
+        return d.toLocaleString();
+      }
+
+      async function register() {
+        try {
+          const res = await fetch(`${API}/auth/register`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: r_email.value.trim(),
+              password: r_pass.value,
+            }),
+          });
+
+          if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(txt || "Registration failed");
+          }
+
+          setStatus("registerStatus", "Registration successful. Please login.");
+          r_pass.value = "";
+          showView("login");
+        } catch (e) {
+          setStatus("registerStatus", `Register error: ${e.message}`, true);
+        }
+      }
+
+      async function login() {
+        try {
+          const res = await fetch(`${API}/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: l_email.value.trim(),
+              password: l_pass.value,
+            }),
+          });
+
+          if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(txt || "Login failed");
+          }
+
+          const d = await res.json();
+          localStorage.setItem("token", d.access_token);
+          setStatus("loginStatus", "Logged in successfully.");
+          showView("todos");
+        } catch (e) {
+          setStatus("loginStatus", `Login error: ${e.message}`, true);
+        }
+      }
+
+      function authHeaders() {
+        return {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + getToken(),
+        };
+      }
+
+      function requireAuth() {
+        if (!getToken()) {
+          setStatus("todoStatus", "Please login first.", true);
+          showView("login");
+          return false;
+        }
+        return true;
+      }
+
+      function clearCreateForm() {
+        c_title.value = "";
+        c_description.value = "";
+        c_deadline.value = "";
+      }
+
+      function clearEditForm() {
+        e_id.value = "";
+        e_title.value = "";
+        e_description.value = "";
+        e_completed.checked = false;
+      }
+
+      async function createTodo() {
+        if (!requireAuth()) return;
+
+        const payload = {
+          title: c_title.value.trim(),
+          description: c_description.value.trim() || null,
+          deadline: normalizeDatetimeForApi(c_deadline.value),
+        };
+
+        if (!payload.title) {
+          setStatus("todoStatus", "Title is required.", true);
+          return;
+        }
+
+        try {
+          const res = await fetch(`${API}/todos/`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(payload),
+          });
+
+          if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(txt || "Create failed");
+          }
+
+          clearCreateForm();
+          setStatus("todoStatus", "Todo created.");
+          loadTodos();
+        } catch (e) {
+          setStatus("todoStatus", `Create error: ${e.message}`, true);
+        }
+      }
+
+      async function loadTodos() {
+        if (!requireAuth()) return;
+
+        try {
+          const res = await fetch(`${API}/todos/`, {
+            headers: { Authorization: "Bearer " + getToken() },
+          });
+
+          if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(txt || "Load failed");
+          }
+
+          const data = await res.json();
+          renderTodos(data);
+          setStatus("todoStatus", `${data.length} todo(s) loaded.`);
+        } catch (e) {
+          setStatus("todoStatus", `Load error: ${e.message}`, true);
+        }
+      }
+
+      function renderTodos(todos) {
+        list.innerHTML = "";
+
+        if (!Array.isArray(todos) || todos.length === 0) {
+          list.innerHTML = "<div class='todo-item'>No todos yet.</div>";
+          return;
+        }
+
+        todos.forEach((t) => {
+          const div = document.createElement("div");
+          div.className = "todo-item";
+          div.innerHTML = `
+            <h4 class="todo-title">${escapeHtml(t.title || "(untitled)")}</h4>
+            <p class="todo-meta">Description: ${escapeHtml(t.description || "-")}</p>
+            <p class="todo-meta">Completed: ${t.completed ? "Yes" : "No"}</p>
+            <p class="todo-meta">Deadline: ${escapeHtml(formatDate(t.deadline))}</p>
+            <p class="todo-meta">Created at: ${escapeHtml(formatDate(t.created_at))}</p>
+            <p class="todo-meta">ID: ${escapeHtml(t.id)}</p>
+            <div class="actions">
+              <button class="btn-soft" data-edit="${t.id}">Edit</button>
+              <button class="btn-danger" data-del="${t.id}">Delete</button>
+            </div>
+          `;
+
+          div.querySelector("[data-edit]").onclick = () => fillEditForm(t);
+          div.querySelector("[data-del]").onclick = () => deleteTodo(t.id);
+          list.appendChild(div);
         });
       }
 
-      function login() {
-        fetch(`${API}/auth/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: l_email.value,
-            password: l_pass.value,
-          }),
-        })
-          .then((r) => r.json())
-          .then((d) => localStorage.setItem("token", d.access_token));
+      function fillEditForm(todo) {
+        e_id.value = todo.id;
+        e_title.value = todo.title || "";
+        e_description.value = todo.description || "";
+        e_completed.checked = !!todo.completed;
+        setStatus("todoStatus", `Editing todo ${todo.id}`);
       }
 
-      function createTodo() {
-        fetch(`${API}/todos/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + localStorage.getItem("token"),
-          },
-          body: JSON.stringify({ title: title.value }),
-        }).then(loadTodos);
-      }
+      async function updateTodo() {
+        if (!requireAuth()) return;
+        if (!e_id.value) {
+          setStatus("todoStatus", "Select a todo to edit first.", true);
+          return;
+        }
 
-      function loadTodos() {
-        fetch(`${API}/todos/`, {
-          headers: {
-            Authorization: "Bearer " + localStorage.getItem("token"),
-          },
-        })
-          .then((r) => r.json())
-          .then((data) => {
-            list.innerHTML = "";
-            data.forEach((t) => {
-              let div = document.createElement("div");
-              div.innerText = t.title;
-              list.appendChild(div);
-            });
+        const payload = {
+          title: e_title.value.trim() || null,
+          description: e_description.value.trim() || null,
+          completed: !!e_completed.checked,
+        };
+
+        try {
+          const res = await fetch(`${API}/todos/${e_id.value}`, {
+            method: "PUT",
+            headers: authHeaders(),
+            body: JSON.stringify(payload),
           });
+
+          if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(txt || "Update failed");
+          }
+
+          setStatus("todoStatus", "Todo updated.");
+          clearEditForm();
+          loadTodos();
+        } catch (e) {
+          setStatus("todoStatus", `Update error: ${e.message}`, true);
+        }
       }
+
+      async function deleteTodo(id) {
+        if (!requireAuth()) return;
+
+        try {
+          const res = await fetch(`${API}/todos/${id}`, {
+            method: "DELETE",
+            headers: { Authorization: "Bearer " + getToken() },
+          });
+
+          if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(txt || "Delete failed");
+          }
+
+          if (e_id.value === id) clearEditForm();
+          setStatus("todoStatus", "Todo deleted.");
+          loadTodos();
+        } catch (e) {
+          setStatus("todoStatus", `Delete error: ${e.message}`, true);
+        }
+      }
+
+      function logout() {
+        localStorage.removeItem("token");
+        clearCreateForm();
+        clearEditForm();
+        list.innerHTML = "";
+        setStatus("loginStatus", "Logged out.");
+        setStatus("todoStatus", "");
+        showView("login");
+      }
+
+      function escapeHtml(input) {
+        return String(input)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      showView(getToken() ? "todos" : "login");
     </script>
   </body>
 </html>

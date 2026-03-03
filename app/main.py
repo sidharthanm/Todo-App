@@ -6,7 +6,7 @@ from app.api import auth, todos
 from app.core.logging import setup_logging
 
 setup_logging()
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
