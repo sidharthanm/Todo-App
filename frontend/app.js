@@ -100,6 +100,23 @@ function escapeHtml(input) {
     .replaceAll("'", "&#039;");
 }
 
+function parseContextTags(rawInput) {
+  if (!rawInput) return [];
+  const seen = new Set();
+  const tags = [];
+
+  rawInput.split(",").forEach((piece) => {
+    const clean = piece.trim();
+    if (!clean) return;
+    const key = clean.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    tags.push(clean.slice(0, 64));
+  });
+
+  return tags;
+}
+
 async function register() {
   try {
     const res = await fetch(`${API}/auth/register`, {
@@ -162,6 +179,7 @@ function logout() {
 function clearCreateForm() {
   document.getElementById("c_title").value = "";
   document.getElementById("c_description").value = "";
+  document.getElementById("c_context_tags").value = "";
   document.getElementById("c_deadline").value = "";
   document.getElementById("c_parent_id").value = "";
 }
@@ -170,6 +188,7 @@ function clearEditForm() {
   document.getElementById("e_id").value = "";
   document.getElementById("e_title").value = "";
   document.getElementById("e_description").value = "";
+  document.getElementById("e_context_tags").value = "";
   document.getElementById("e_completed").checked = false;
 }
 
@@ -187,6 +206,7 @@ async function createTodo() {
   const payload = {
     title,
     description: document.getElementById("c_description").value.trim() || null,
+    context_tags: parseContextTags(document.getElementById("c_context_tags").value),
     deadline: normalizeDatetimeForApi(document.getElementById("c_deadline").value),
     parent_id: parentId,
   };
@@ -278,6 +298,9 @@ function createCard(todo) {
   const indentTag = todo.level > 0 ? `<span class="tag">Subtask L${todo.level}</span>` : "";
   const parentTag = todo.parentTitle ? `<span class="tag">Parent: ${escapeHtml(todo.parentTitle)}</span>` : "";
   const deadlineTag = todo.deadline ? `<span class="tag">Due: ${escapeHtml(formatDate(todo.deadline))}</span>` : "";
+  const contextTagHtml = (Array.isArray(todo.context_tags) ? todo.context_tags : [])
+    .map((tag) => `<span class="tag context">#${escapeHtml(tag)}</span>`)
+    .join("");
 
   card.innerHTML = `
     <h4>${escapeHtml(todo.title || "(untitled)")}</h4>
@@ -288,6 +311,7 @@ function createCard(todo) {
       ${indentTag}
       ${parentTag}
       ${deadlineTag}
+      ${contextTagHtml}
     </div>
     <div class="actions">
       <button class="mini" data-action="edit">Edit</button>
@@ -326,6 +350,9 @@ function fillEditForm(todoId) {
   document.getElementById("e_id").value = todo.id;
   document.getElementById("e_title").value = todo.title || "";
   document.getElementById("e_description").value = todo.description || "";
+  document.getElementById("e_context_tags").value = Array.isArray(todo.context_tags)
+    ? todo.context_tags.join(", ")
+    : "";
   document.getElementById("e_completed").checked = !!todo.completed;
   setStatus("boardStatus", `Editing task ${todo.id}`);
 }
@@ -348,6 +375,7 @@ async function updateTodo() {
   const payload = {
     title: document.getElementById("e_title").value.trim() || null,
     description: document.getElementById("e_description").value.trim() || null,
+    context_tags: parseContextTags(document.getElementById("e_context_tags").value),
     completed: !!document.getElementById("e_completed").checked,
   };
 
