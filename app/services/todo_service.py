@@ -1,19 +1,36 @@
 from sqlalchemy.orm import Session
+from sqlalchemy.orm import selectinload
+
+from app.models.context_tag import TodoContextTag
 from app.models.todo import Todo
 
 
 def create_todo(db: Session, data, user_id):
-    payload = data.dict()
+    payload = data.model_dump(exclude={"context_tags"})
     todo = Todo(**payload, user_id=user_id)
+    tags = _normalize_context_tags(data.context_tags)
     db.add(todo)
+    db.flush()
+    if tags:
+        db.add_all(
+            [
+                TodoContextTag(todo_id=todo.id, user_id=user_id, tag=tag)
+                for tag in tags
+            ]
+        )
     db.commit()
     db.refresh(todo)
     return todo
 
 
 def get_todos(db: Session, user_id):
-    todos = db.query(Todo).filter(Todo.user_id == user_id).order_by(
-        Todo.created_at.asc()).all()
+    todos = (
+        db.query(Todo)
+        .options(selectinload(Todo.context_tags))
+        .filter(Todo.user_id == user_id)
+        .order_by(Todo.created_at.asc())
+        .all()
+    )
     out_by_id = {}
     for todo in todos:
         out_by_id[str(todo.id)] = _to_dict(todo)
@@ -32,8 +49,16 @@ def get_todos(db: Session, user_id):
 
 
 def update_todo(db: Session, todo, data):
-    for key, value in data.dict(exclude_unset=True).items():
+    update_fields = data.model_dump(exclude_unset=True, exclude={"context_tags"})
+    for key, value in update_fields.items():
         setattr(todo, key, value)
+
+    if "context_tags" in data.model_fields_set:
+        tags = _normalize_context_tags(data.context_tags or [])
+        todo.context_tags.clear()
+        for tag in tags:
+            todo.context_tags.append(TodoContextTag(todo_id=todo.id, user_id=todo.user_id, tag=tag))
+
     db.commit()
     db.refresh(todo)
     return todo
@@ -70,5 +95,24 @@ def _to_dict(todo: Todo):
         "deadline": todo.deadline,
         "created_at": todo.created_at,
         "parent_id": str(todo.parent_id) if todo.parent_id else None,
+        "context_tags": [item.tag for item in todo.context_tags],
         "subtasks": [],
     }
+
+
+def _normalize_context_tags(tags):
+    if not tags:
+        return []
+
+    normalized = []
+    seen = set()
+    for raw in tags:
+        tag = str(raw).strip()
+        if not tag:
+            continue
+        key = tag.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(tag[:64])
+    return normalized

@@ -22,3 +22,5 @@ class Todo(Base):
     subtasks = relationship(
         "Todo", back_populates="parent", cascade="all, delete-orphan")
     parent = relationship("Todo", back_populates="subtasks", remote_side=[id])
+    context_tags = relationship(
+        "TodoContextTag", back_populates="todo", cascade="all, delete-orphan")

@@ -1,4 +1,4 @@
-from app.models import user, todo  # import models
+from app.models import context_tag, todo, user  # import models
 from app.db.base import Base
 from logging.config import fileConfig
 

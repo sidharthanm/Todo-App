@@ -279,9 +279,21 @@ select:focus {
 
 .lane-dropzone {
   min-height: 390px;
+  max-height: 62vh;
+  overflow-y: auto;
+  padding-right: 4px;
   display: grid;
   gap: 10px;
   align-content: start;
+}
+
+.lane-dropzone::-webkit-scrollbar {
+  width: 8px;
+}
+
+.lane-dropzone::-webkit-scrollbar-thumb {
+  background: rgba(51, 136, 240, 0.6);
+  border-radius: 999px;
 }
 
 .lane.dragover {
@@ -333,6 +345,11 @@ select:focus {
   padding: 2px 8px;
   font-size: 0.78rem;
   color: var(--muted);
+}
+
+.tag.context {
+  border-color: rgba(33, 183, 255, 0.7);
+  color: #bde6ff;
 }
 
 .card .actions {
@@ -390,5 +407,6 @@ select:focus {
 
   .lane-dropzone {
     min-height: 180px;
+    max-height: 44vh;
   }
 }
