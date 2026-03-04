@@ -46,6 +46,21 @@ def delete_todo(db: Session, todo):
     return todo
 
 
+def clear_finished_parent_todos(db: Session, user_id):
+    finished_roots = db.query(Todo).filter(
+        Todo.user_id == user_id,
+        Todo.completed.is_(True),
+        Todo.parent_id.is_(None),
+    ).all()
+
+    cleared = len(finished_roots)
+    for todo in finished_roots:
+        db.delete(todo)
+
+    db.commit()
+    return cleared
+
+
 def _to_dict(todo: Todo):
     return {
         "id": str(todo.id),

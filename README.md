@@ -1,68 +1,135 @@
-# Tier1 Smart Todo - Services and Tech Documentation
+# Tier1 Smart Todo
 
-## Overview
+FastAPI + PostgreSQL todo application with JWT auth, hierarchical tasks (parent/subtasks), and a static HTML frontend.
 
-Tier1 Smart Todo is a FastAPI-based backend for user-authenticated todo management, with a minimal HTML frontend and PostgreSQL persistence.
+## Current Features
 
-Run using ` uv run uvicorn app.main:app --reload`
+- User registration and login
+- JWT-protected todo APIs
+- Nested todos using `parent_id`
+- Soft-finish flow (task is marked `completed=true` instead of hard delete)
+- Finished parent-task cleanup endpoint
+- Browser frontend at `frontend/index.html`
 
-## Services Offered by the App
+## Tech Stack
 
-### 1) Authentication Service (`/auth`)
+- Python (`pyproject.toml` requires `>=3.13`)
+- FastAPI
+- SQLAlchemy
+- Pydantic v2
+- PostgreSQL + `psycopg2-binary`
+- Alembic
+- `python-jose` (JWT)
+- `passlib[argon2]` (password hashing)
+- Uvicorn
 
-Handles account creation and login.
+Note: Docker currently uses `python:3.11-slim`, which does not match the `>=3.13` project requirement.
+
+## Project Structure
+
+- `app/main.py` - FastAPI app setup, CORS, router registration
+- `app/api/auth.py` - auth endpoints
+- `app/api/todos.py` - todo endpoints
+- `app/services/` - business logic
+- `app/models/` - SQLAlchemy models
+- `app/schemas/` - request/response schemas
+- `frontend/index.html` - static UI
+- `alembic/` - migrations
+- `docker-compose.yml` - app + database services
+
+## Environment Variables
+
+Set these in `.env`:
+
+- `DATABASE_URL`
+- `SECRET_KEY`
+- `ACCESS_TOKEN_EXPIRE_MINUTES` (default `30` if omitted)
+
+Example `DATABASE_URL`:
+
+```env
+DATABASE_URL=Your_postgres_URL_here
+```
+
+## Run Locally (uv)
+
+1. Install dependencies:
+```bash
+uv sync
+```
+2. Start PostgreSQL (for example with Docker):
+```bash
+docker compose up -d db
+```
+3. Apply migrations:
+```bash
+uv run alembic upgrade head
+```
+4. Start API:
+```bash
+uv run uvicorn app.main:app --reload
+```
+5. Open UI:
+  - Open `frontend/index.html` in browser
+  - API base URL used by UI: `http://127.0.0.1:8000`
+
+## Run with Docker Compose
+
+```bash
+docker compose up --build
+```
+
+Services:
+
+- API: `http://127.0.0.1:8000`
+- PostgreSQL: `localhost:5432` (`postgres` / `toor`, DB: `todoapp`)
+
+## API Reference
+
+All `/todos` routes require:
+
+```http
+Authorization: Bearer <token>
+```
+
+### Auth
 
 - `POST /auth/register`
-  - Input: `email`, `password`
-  - Behavior: creates a user with Argon2-hashed password
+  - Body: `{ "email": "...", "password": "..." }`
+  - Creates a user with hashed password
 - `POST /auth/login`
-  - Input: `email`, `password`
-  - Behavior: validates credentials and returns JWT access token
-  - Output: `{ "access_token": "..." }`
+  - Body: `{ "email": "...", "password": "..." }`
+  - Returns: `{ "access_token": "..." }`
 
-### 2) Todo Management Service (`/todos`)
-
-Provides CRUD operations for authenticated users' todos.
-
-All routes require `Authorization: Bearer <token>`.
+### Todos
 
 - `POST /todos/`
-  - Creates a todo for current user
-  - Fields: `title`, optional `description`, optional `deadline`
+  - Create todo
+  - Body:
+    - `title` (required)
+    - `description` (optional)
+    - `deadline` (optional datetime)
+    - `parent_id` (optional UUID of existing user-owned parent task)
 - `GET /todos/`
-  - Lists all todos belonging to current user
+  - Returns user todos as a nested tree using `subtasks`
 - `PUT /todos/{todo_id}`
-  - Updates selected fields (`title`, `description`, `completed`) on user's todo
+  - Partial update fields:
+    - `title`
+    - `description`
+    - `completed`
 - `DELETE /todos/{todo_id}`
-  - Deletes a user's todo
-
-### 3) Frontend Service (Static HTML UI)
-
-A simple browser UI is present at `frontend/index.html` for:
-
-- registration
-- login (stores JWT in localStorage)
-- creating todos
-- listing todos
-
-Note: this frontend is static and calls API directly at `http://127.0.0.1:8000`.
-
-### 4) Database Service (PostgreSQL via Docker Compose)
-
-`docker-compose.yml` defines a `db` service:
-
-- Image: `postgres:18`
-- DB name: `todoapp`
-- Port: `5432`
-
-The app connects using `DATABASE_URL` from `.env`.
+  - Soft-finish behavior: marks todo as completed and returns:
+  - `{ "finished": true, "id": "<todo_id>", "completed": true }`
+- `DELETE /todos/finished/clear-parents`
+  - Hard-deletes completed root tasks (`parent_id IS NULL`)
+  - Returns `{ "cleared": <count> }`
 
 ## Data Model
 
 ### `users`
 
 - `id` (UUID, PK)
-- `email` (unique)
+- `email` (unique, indexed)
 - `hashed_password`
 
 ### `todos`
@@ -70,62 +137,27 @@ The app connects using `DATABASE_URL` from `.env`.
 - `id` (UUID, PK)
 - `title`
 - `description` (nullable)
-- `completed` (default `false`)
+- `completed` (boolean, default `false`)
 - `deadline` (nullable datetime)
 - `created_at` (datetime)
 - `user_id` (FK -> `users.id`)
+- `parent_id` (nullable self-reference FK -> `todos.id`, `ondelete="CASCADE"`)
 
-## Technology Stack
+## Frontend Notes
 
-### Backend
+`frontend/index.html` supports:
 
-- Python (project metadata requires `>=3.13`; Dockerfile currently uses Python `3.11-slim`)
-- FastAPI
-- Uvicorn (ASGI server)
-- SQLAlchemy (ORM)
-- Pydantic (request schemas/validation)
+- register/login/logout
+- create root todos and subtasks
+- edit todo title/description/completed
+- mark task finished
+- view finished tasks
+- clear finished parent tasks
 
-### Authentication & Security
+Token is stored in browser `localStorage`.
 
-- OAuth2 Bearer token flow (FastAPI security dependency)
-- JWT tokens via `python-jose`
-- Password hashing with `passlib[argon2]`
+## Important Notes
 
-### Database & Migrations
-
-- PostgreSQL
-- Alembic for schema migrations
-- `psycopg2-binary` driver
-
-### Configuration & Environment
-
-- `.env` loading via `python-dotenv`
-- Config variables:
-  - `DATABASE_URL`
-  - `SECRET_KEY`
-  - `ACCESS_TOKEN_EXPIRE_MINUTES`
-
-### Containerization
-
-- Dockerfile for app image
-- Docker Compose for app + database orchestration
-
-### Development/Testing Tools
-
-- `pytest`
-- `httpx`
-
-## Runtime Architecture (High-Level)
-
-1. Client calls FastAPI endpoints.
-2. Auth routes issue JWT tokens after credential verification.
-3. Protected todo routes decode JWT and resolve current user.
-4. Service layer performs DB operations through SQLAlchemy session.
-5. PostgreSQL stores persistent user and todo records.
-
-## Important Implementation Notes
-
-- CORS is currently fully open (`allow_origins=["*"]`, all methods/headers).
-- Tables are created at startup via `Base.metadata.create_all(bind=engine)` in `app/main.py`.
-- Alembic is also configured for migrations (mixed strategy currently).
-- Existing `README.md` is empty; this file serves as the active documentation requested.
+- CORS is fully open (`allow_origins=["*"]`, all methods and headers).
+- `Base.metadata.create_all(...)` is currently disabled in `app/main.py`; schema should be managed through Alembic.
+- Some migrations are placeholders (`pass`), so verify migration history for fresh environments.

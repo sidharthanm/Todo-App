@@ -28,6 +28,13 @@ def list_all(db: Session = Depends(get_db),
     return get_todos(db, user.id)
 
 
+@router.delete("/finished/clear-parents")
+def clear_finished_parents(db: Session = Depends(get_db),
+                           user=Depends(get_current_user)):
+    cleared = clear_finished_parent_todos(db, user.id)
+    return {"cleared": cleared}
+
+
 @router.put("/{todo_id}")
 def update(todo_id: str,
            data: TodoUpdate,
