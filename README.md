@@ -23,7 +23,7 @@ FastAPI + PostgreSQL todo application with JWT auth, hierarchical tasks (parent/
 - `passlib[argon2]` (password hashing)
 - Uvicorn
 
-Note: Docker currently uses `python:3.11-slim`, which does not match the `>=3.13` project requirement.
+Docker uses `python:3.13-slim` to match the `>=3.13` project requirement.
 
 ## Project Structure
 
@@ -78,6 +78,12 @@ uv run uvicorn app.main:app --reload
 ```bash
 docker compose up --build
 ```
+
+Startup behavior:
+
+- `db` runs PostgreSQL 18
+- `app` waits for DB health, runs `alembic upgrade head`, then starts Uvicorn
+- app container uses DB host `db` (not `localhost`)
 
 Services:
 
