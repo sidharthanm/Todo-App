@@ -90,6 +90,24 @@ Services:
 - API: `http://127.0.0.1:8000`
 - PostgreSQL: `localhost:5432` (`postgres` / `toor`, DB: `todoapp`)
 
+## CI/CD (GitHub Actions)
+
+Workflow file: `.github/workflows/ci-cd.yml`
+
+- CI (`test` job):
+  - Runs on every push and pull request
+  - Uses Python 3.13
+  - Installs dependencies from `requirements.txt`
+  - Runs `pytest` with CI-safe environment values
+- CD (`docker` job):
+  - Runs only on push to `main` after tests pass
+  - Builds Docker image from `Dockerfile`
+  - Pushes image to GitHub Container Registry:
+    - `ghcr.io/<owner>/tier1-smart-todo:latest`
+    - `ghcr.io/<owner>/tier1-smart-todo:sha-<commit>`
+
+For package publishing, ensure Actions has permission to write packages in your GitHub repository settings.
+
 ## API Reference
 
 All `/todos` routes require:
